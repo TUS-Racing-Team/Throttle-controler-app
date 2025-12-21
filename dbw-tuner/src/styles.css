@@ -153,3 +153,12 @@ body {
 .idle-row input[type="number"] {
   width: 70px;
 }
+
+
+select {
+  background: #1b2230;
+  color: white;
+  border: 1px solid var(--border);
+  padding: 6px;
+  border-radius: 6px;
+}

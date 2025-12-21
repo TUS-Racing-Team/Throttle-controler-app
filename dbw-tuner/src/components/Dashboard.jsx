@@ -5,6 +5,7 @@ import ThrottleCurve from "./ThrottleCurve";
 import IdleControl from "./IdleControl";
 import IdleRPMTarget from "./IdleRPMTarget";
 import IdleCoolantTable from "./IdleCoolantTable";
+import DebugConsole from "./DebugConsole";
 import "./card.css";
 
 export default function Dashboard({ setWarnings }) {
@@ -40,6 +41,7 @@ export default function Dashboard({ setWarnings }) {
 
   return (
     <>
+      {/* ===== LIVE TELEMETRY ===== */}
       <div className="card">
         <h3>Live Telemetry</h3>
 
@@ -80,9 +82,13 @@ export default function Dashboard({ setWarnings }) {
         />
       </div>
 
+      {/* ===== IDLE CONTROL ===== */}
       <IdleControl />
       <IdleRPMTarget />
       <IdleCoolantTable />
+
+      {/* ===== DEBUG CONSOLE ===== */}
+      <DebugConsole />
     </>
   );
 }
