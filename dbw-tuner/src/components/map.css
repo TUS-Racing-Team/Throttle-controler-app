@@ -1,0 +1,15 @@
+.map {
+  border-collapse: collapse;
+  margin-top: 12px;
+}
+
+.map td {
+  border: 1px solid var(--border);
+  padding: 4px;
+}
+
+.map input {
+  width: 52px;
+  border: none;
+  text-align: center;
+}

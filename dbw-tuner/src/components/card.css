@@ -1,0 +1,64 @@
+.card {
+  background: var(--bg-card);
+  border-radius: var(--radius);
+  padding: 20px;
+  box-shadow: var(--shadow);
+  border: 1px solid var(--border);
+}
+
+.card.full {
+  grid-column: 1 / -1;
+}
+
+.grid {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 12px;
+}
+
+.gauge {
+  background: var(--bg-card-alt);
+  border-radius: 10px;
+  padding: 14px;
+  text-align: center;
+}
+
+.gauge .label {
+  font-size: 12px;
+  color: var(--text-muted);
+}
+
+.gauge .value {
+  font-size: 28px;
+  font-weight: bold;
+  color: var(--accent);
+}
+
+.gauge .unit {
+  font-size: 12px;
+  color: var(--text-muted);
+}
+
+.status.ok { color: #00ff9c; }
+.status.bad { color: var(--danger); }
+
+.warning {
+  border: 1px solid var(--danger);
+  background: #2a1212;
+  color: #ffb3b3;
+}
+
+.btn {
+  margin-right: 6px;
+  padding: 8px 14px;
+  border: none;
+  border-radius: 8px;
+  background: #2a3242;
+  color: white;
+  cursor: pointer;
+}
+
+.btn.accent {
+  background: var(--accent);
+  color: black;
+}

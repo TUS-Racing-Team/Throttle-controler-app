@@ -1,0 +1,16 @@
+body {
+  background: #111;
+  color: #eee;
+  font-family: sans-serif;
+}
+
+.card {
+  background: #1e1e1e;
+  padding: 12px;
+  margin: 12px;
+  border-radius: 8px;
+}
+
+input {
+  width: 50px;
+}

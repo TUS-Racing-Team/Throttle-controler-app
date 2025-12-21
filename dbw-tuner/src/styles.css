@@ -1,0 +1,155 @@
+:root {
+  --bg-main: #0b0f14;
+  --bg-card: #141a22;
+  --bg-card-alt: #1b2230;
+  --text-main: #e6e9ef;
+  --text-muted: #9aa4b2;
+  --accent: #00e0ff;
+  --danger: #ff4d4d;
+  --border: #252c3a;
+}
+
+body {
+  margin: 0;
+  background: var(--bg-main);
+  color: var(--text-main);
+  font-family: system-ui, sans-serif;
+}
+
+.app-shell {
+  display: flex;
+  flex-direction: column;
+  height: 100vh;
+}
+
+.navbar {
+  height: 50px;
+  background: #0f1420;
+  display: flex;
+  align-items: center;
+  padding: 0 20px;
+  border-bottom: 1px solid var(--border);
+}
+
+.logo {
+  font-weight: bold;
+  margin-right: 20px;
+}
+
+.nav-buttons button {
+  background: none;
+  border: none;
+  color: var(--text-muted);
+  margin-right: 10px;
+  cursor: pointer;
+}
+
+.nav-buttons .active {
+  color: var(--accent);
+}
+
+.statusbar {
+  height: 28px;
+  padding-left: 20px;
+  display: flex;
+  align-items: center;
+  font-size: 13px;
+}
+
+.statusbar.ok { color: #00ff9c; }
+.statusbar.bad { color: var(--danger); }
+
+.content {
+  flex: 1;
+  padding: 20px;
+  overflow: auto;
+}
+
+.landing {
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+}
+
+.btn {
+  padding: 10px 16px;
+  border: none;
+  border-radius: 8px;
+  background: #2a3242;
+  color: white;
+  cursor: pointer;
+}
+
+.btn.accent {
+  background: var(--accent);
+  color: black;
+}
+
+.btn.big {
+  padding: 14px 30px;
+  font-size: 16px;
+}
+
+.hint {
+  font-size: 13px;
+  color: var(--text-muted);
+  margin-top: 6px;
+}
+
+.warnings-toast {
+  position: fixed;
+  right: 20px;
+  bottom: 20px;
+}
+
+.toast {
+  background: #2a1212;
+  border: 1px solid var(--danger);
+  color: #ffb3b3;
+  padding: 10px 14px;
+  margin-top: 6px;
+  border-radius: 8px;
+}
+
+/* TOOLTIP */
+.tooltip-wrapper {
+  position: relative;
+  margin-left: 6px;
+  cursor: help;
+  color: var(--text-muted);
+}
+
+.tooltip {
+  position: absolute;
+  bottom: 130%;
+  left: 50%;
+  transform: translateX(-50%);
+  background: #1b2230;
+  color: #e6e9ef;
+  padding: 8px 10px;
+  border-radius: 6px;
+  font-size: 12px;
+  white-space: nowrap;
+  opacity: 0;
+  pointer-events: none;
+  transition: 0.2s;
+  border: 1px solid var(--border);
+  z-index: 10;
+}
+
+.tooltip-wrapper:hover .tooltip {
+  opacity: 1;
+}
+
+.idle-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin: 12px 0;
+}
+
+.idle-row input[type="number"] {
+  width: 70px;
+}
