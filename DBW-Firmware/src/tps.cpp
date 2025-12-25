@@ -22,5 +22,9 @@ static float toPct(int raw, int mn, int mx) {
 float readThrottlePct() {
     float p1 = toPct(readADC(PIN_TPS1), tps1Min, tps1Max);
     float p2 = toPct(readADC(PIN_TPS2), tps2Min, tps2Max);
+    if (fabsf(p1 - p2) > 10.0f) {
+        // Sensor mismatch
+        return -1.0f;
+    }
     return (p1 + p2) * 0.5f;
 }
