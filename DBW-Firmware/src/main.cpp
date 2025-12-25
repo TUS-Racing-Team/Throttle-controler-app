@@ -20,5 +20,5 @@ void loop() {
   }
 
   controlUpdate(cmd);
-  delay(5);
+  // delay(5);
 }

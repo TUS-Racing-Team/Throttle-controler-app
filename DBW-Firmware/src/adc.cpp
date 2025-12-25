@@ -7,6 +7,7 @@ static int pinToChannel(int pin) {
         case A1: return 7;
         case A2: return 5;
         case A3: return 4;
+        case A4: return 3;
         default: return -1;
     }
 }
@@ -24,7 +25,9 @@ void adcInit() {
     ADC->ADC_CHER =
         ADC_CHER_CH6 |  // A0
         ADC_CHER_CH7 |  // A1
-        ADC_CHER_CH5;   // A2
+        ADC_CHER_CH5 |   // A2
+        ADC_CHER_CH4 |   // A3
+        ADC_CHER_CH3;    // A4
 }
 
 uint16_t readADC(int pin) {
