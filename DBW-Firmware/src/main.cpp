@@ -15,10 +15,10 @@ void setup() {
 }
 
 void loop() {
-  if (Serial.available()) {
-    cmd = constrain(Serial.parseInt(), 0, 100);
-  }
+  // if (Serial.available()) {
+  //   cmd = constrain(Serial.parseInt(), 0, 100);
+  // }
 
-  controlUpdate(cmd);
+  controlUpdate(0);
   // delay(5);
 }

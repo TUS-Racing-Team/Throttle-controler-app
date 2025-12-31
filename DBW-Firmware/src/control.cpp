@@ -3,6 +3,7 @@
 #include "tps.h"
 #include "apps.h"
 #include "config.h"
+#include "read_data.h"
 #include <Arduino.h>
 #include <math.h>
 
@@ -21,35 +22,31 @@ const int PWM_MIN = 40;
 const int PWM_NEAR_MAX = 90;
 const int PWM_FAR = 110;
 
-struct ReadData
-{
-    /* data */
-    float pos;
-    bool valid;
-};
+// Use ReadData from include/read_data.h
 
 void controlInit() {
     posF = 0;
     tpsPosErrorStart = 0;
 }
 
-ReadData readAppsPct() {
+ReadData readApps() {
     ReadData appsData = readAppsPct();
     
     if (!appsData.valid) {
         if (appsPosErrorStart == 0) {
             appsPosErrorStart = millis();
             // keep updating but this possition can't be trusted 
-            return appsData.pos;
+            return ReadData{appsData.pos, false};
         } else if ((unsigned long)(millis() - appsPosErrorStart) > 500UL) {
             // persistent error — stop motor
             motorStop();
-            return;
+            return ReadData{appsData.pos, false};
         }
         // Don't update filtered position while we have an intermittent sensor error
+        return ReadData{appsData.pos, false};
     } else {
         // valid reading — reset error timer and update filtered position
-        return appsData.pos;
+        return ReadData{appsData.pos, true};
     }
 }
 

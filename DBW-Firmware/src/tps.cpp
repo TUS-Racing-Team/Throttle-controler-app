@@ -2,18 +2,12 @@
 #include "adc.h"
 #include "pins.h"
 #include "config.h"
+#include "read_data.h"
 
 int tps1Min = 1070;
 int tps1Max = 3390;
 int tps2Min = 375;
 int tps2Max = 3340;
-
-struct tpsData
-{
-    /* data */
-    float pos;
-    bool valid;
-};
 
 
 static float clampf(float x, float a, float b) {
@@ -27,12 +21,14 @@ static float toPct(int raw, int mn, int mx) {
     return clampf(v, 0.0f, 1.0f) * 100.0f;
 }
 
-tpsData readThrottlePct() {
+ReadData readThrottlePct() {
     float p1 = toPct(readADC(PIN_TPS1), tps1Min, tps1Max);
     float p2 = toPct(readADC(PIN_TPS2), tps2Min, tps2Max);
+    // Serial.print("TPS1: "); Serial.print(p1);
+    // Serial.print(" TPS2: "); Serial.println(p2);
     if (fabsf(p1 - p2) > 10.0f) {
         // Sensor mismatch
-        return tpsData{(p1 + p2) * 0.5f, false};
+        return ReadData{(p1 + p2) * 0.5f, false};
     }
-    return tpsData{(p1 + p2) * 0.5f, true};
+    return ReadData{(p1 + p2) * 0.5f, true};
 }
