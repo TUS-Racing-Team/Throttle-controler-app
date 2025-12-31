@@ -14,13 +14,7 @@ float posF = 0;
 static unsigned long tpsPosErrorStart = 0;
 static unsigned long appsPosErrorStart = 0;
 
-const float IDLE_POS = 7.5f;
-const float FAR_ZONE = 10.0f;
-const float DEADBAND = 1.0f;
-
-const int PWM_MIN = 40;
-const int PWM_NEAR_MAX = 90;
-const int PWM_FAR = 110;
+// control parameters are declared in include/config.h and defined in params.cpp
 
 // Use ReadData from include/read_data.h
 

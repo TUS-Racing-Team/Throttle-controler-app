@@ -3,6 +3,7 @@
 #include "pins.h"
 #include "config.h"
 #include "read_data.h"
+#include <Arduino.h>
 
 // TODO: callibrate these values
 int app1Min = 1070;
