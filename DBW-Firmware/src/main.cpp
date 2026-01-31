@@ -15,7 +15,7 @@ void setup() {
   Serial.begin(115200);
   analogReadResolution(12);
 
-  adcInit();
+  // adcInit();
   motorInit();
   controlInit();
   commInit();
@@ -25,10 +25,10 @@ void loop() {
   // if (Serial.available()) {
   //   cmd = constrain(Serial.parseInt(), 0, 100);
   // }
-
   controlUpdate(0);
   
   if (commIsActive()) {
     commUpdate();
   }
+  delay(10);
 }

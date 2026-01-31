@@ -24,8 +24,8 @@ static float toPct(int raw, int mn, int mx) {
 }
 
 ReadData readAppsPct() {
-    float p1 = toPct(readADC(PIN_APPS1), app1Min, app1Max);
-    float p2 = toPct(readADC(PIN_APPS2), app2Min, app2Max);
+    float p1 = toPct(analogRead(PIN_APPS1), app1Min, app1Max);
+    float p2 = toPct(analogRead(PIN_APPS2), app2Min, app2Max);
     Serial.print("APPS1: "); Serial.print(p1);
     Serial.print(" APPS2: "); Serial.println(p2);
     if (fabsf(p1 - p2) > 10.0f) {

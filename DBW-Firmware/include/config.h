@@ -16,3 +16,8 @@ extern int PWM_FAR;
 
 // Filter
 extern float alpha;
+
+// PID parameters
+extern float Kp;
+extern float Ki;
+extern float Kd;

@@ -4,10 +4,10 @@
 #include "config.h"
 #include "read_data.h"
 
-int tps1Min = 1070;
-int tps1Max = 3390;
-int tps2Min = 375;
-int tps2Max = 3340;
+int tps1Min = 880;
+int tps1Max = 2720;
+int tps2Min = 300;
+int tps2Max = 2600;
 
 
 static float clampf(float x, float a, float b) {
@@ -22,8 +22,8 @@ static float toPct(int raw, int mn, int mx) {
 }
 
 ReadData readThrottlePct() {
-    float p1 = toPct(readADC(PIN_TPS1), tps1Min, tps1Max);
-    float p2 = toPct(readADC(PIN_TPS2), tps2Min, tps2Max);
+    float p1 = toPct(analogRead(PIN_TPS1), tps1Min, tps1Max);
+    float p2 = toPct(analogRead(PIN_TPS2), tps2Min, tps2Max);
     // Serial.print("TPS1: "); Serial.print(p1);
     // Serial.print(" TPS2: "); Serial.println(p2);
     if (fabsf(p1 - p2) > 10.0f) {
