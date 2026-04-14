@@ -2,6 +2,7 @@
 #include "adc.h"
 #include "motor.h"
 #include "control.h"
+#include "apps.h"
 #include "../include/comm/comm.h"
 
 int cmd = 0;
@@ -22,13 +23,10 @@ void setup() {
 }
 
 void loop() {
-  // if (Serial.available()) {
-  //   cmd = constrain(Serial.parseInt(), 0, 100);
-  // }
-  controlUpdate(0);
+  controlTP();
   
   if (commIsActive()) {
     commUpdate();
   }
-  delay(10);
+  delay(1);
 }

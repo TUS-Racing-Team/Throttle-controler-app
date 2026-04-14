@@ -21,3 +21,7 @@ extern float alpha;
 extern float Kp;
 extern float Ki;
 extern float Kd;
+
+// Command (setpoint) filter
+extern float CMD_ALPHA;      // smoothing factor for incoming command (0..1)
+extern float CMD_SLEW_RATE;  // maximum change in command (percent per second)

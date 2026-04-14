@@ -6,15 +6,19 @@
 // ===== ТЕЗИ ПАРАМЕТРИ СЕ ПОЛЗВАТ ОТ CONTROL =====
 float IDLE_POS = 7.5f;
 float FAR_ZONE   = 10.0f;
-float DEADBAND   = 1.0f;
+float DEADBAND   = 1.5f;      // larger zone to prevent oscillation
 int   PWM_FAR    = 110;
 int   PWM_MIN    = 40;
 int   PWM_NEAR_MAX = 90;
 
 // PID parameters
-float Kp = 2.0f;    // Proportional gain
-float Ki = 0.1f;    // Integral gain
-float Kd = 0.5f;    // Derivative gain
+float Kp = 1.0f;    // Proportional gain
+float Ki = 0.3f;    // Integral gain
+float Kd = 1.0f;    // Derivative gain (reduced)
+
+// Command filter defaults
+float CMD_ALPHA = 0.25f;      // smoothing factor for incoming command (higher = faster tracking)
+float CMD_SLEW_RATE = 800.0f; // percent per second maximum change (faster response)
 
 void setParam(const char* key, const char* value) {
 
@@ -57,6 +61,15 @@ void setParam(const char* key, const char* value) {
         Kd = atof(value);
         return;
     }
+    if (strcmp(key, "CMD_ALPHA") == 0) {
+        CMD_ALPHA = atof(value);
+        return;
+    }
+
+    if (strcmp(key, "CMD_SLEW_RATE") == 0) {
+        CMD_SLEW_RATE = atof(value);
+        return;
+    }
 }
 
 void dumpParams() {
@@ -68,4 +81,6 @@ void dumpParams() {
     SerialUSB.print("Kp "); SerialUSB.println(Kp);
     SerialUSB.print("Ki "); SerialUSB.println(Ki);
     SerialUSB.print("Kd "); SerialUSB.println(Kd);
+    SerialUSB.print("CMD_ALPHA "); SerialUSB.println(CMD_ALPHA);
+    SerialUSB.print("CMD_SLEW_RATE "); SerialUSB.println(CMD_SLEW_RATE);
 }

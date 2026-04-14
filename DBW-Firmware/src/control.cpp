@@ -15,6 +15,11 @@ static float prevError = 0;
 static float integralError = 0;
 static unsigned long lastUpdateTime = 0;
 
+// Filtered target (setpoint)
+static float targetF = 0;
+static float prevPosF = 0;
+static int printCounter = 0;
+
 // Timers for sensor error handling
 static unsigned long tpsPosErrorStart = 0;
 static unsigned long appsPosErrorStart = 0;
@@ -29,6 +34,9 @@ void controlInit() {
     prevError = 0;
     integralError = 0;
     lastUpdateTime = millis();
+    targetF = IDLE_POS;
+    prevPosF = 0;
+    printCounter = 0;
 }
 
 ReadData readApps() {
@@ -46,19 +54,20 @@ ReadData readApps() {
         }
         // Don't update filtered position while we have an intermittent sensor error
         return ReadData{appsData.pos, false};
-    } else {
-        // valid reading — reset error timer and update filtered position
-        return ReadData{appsData.pos, true};
-    }
+    } 
+
+    return ReadData{appsData.pos, true};
 }
 
-void controlUpdate(int wantedPos) {
-    float target = (wantedPos < (int)ceil(IDLE_POS)) ? IDLE_POS : (float)wantedPos;
+void controlTP() {
+    ReadData appsData = readApps();
+    float wanted = appsData.pos;
+    float target = (wanted < (int)ceil(IDLE_POS)) ? IDLE_POS : wanted;
 
     ReadData tpsData = readThrottlePct();
     float pos = tpsData.pos;
     bool valid = tpsData.valid;
-    Serial.print("Target: "); Serial.print(target); Serial.print(" TPS Pos: "); Serial.print(pos); Serial.print(" Valid: "); Serial.println(valid);
+    // Serial.print("Target: "); Serial.print(target); Serial.print(" TPS Pos: "); Serial.print(pos); Serial.print(" Valid: "); Serial.println(valid);
     
     // Handle sensor errors: if `valid` is for more than 500ms, stop the motor
     if (!valid) {
@@ -86,7 +95,23 @@ void controlUpdate(int wantedPos) {
     if (deltaTime < 0.001f) deltaTime = 0.001f;  // Minimum 1ms
     lastUpdateTime = currentTime;
 
-    float err = target - posF;
+    // Smooth and limit setpoint changes to avoid jumps when moving APPS
+    float targetNext = targetF + CMD_ALPHA * (target - targetF);
+    float maxDelta = CMD_SLEW_RATE * deltaTime; // percent per second -> percent per this step
+    float diff = targetNext - targetF;
+    if (diff > maxDelta) diff = maxDelta;
+    else if (diff < -maxDelta) diff = -maxDelta;
+    targetF += diff;
+
+    float err = targetF - posF;
+
+    // Print only frequency (Hz) and difference between APPS and filtered target, but not every loop
+    float hz = 1.0f / deltaTime;
+    printCounter++;
+    if (printCounter >= 5) {
+        Serial.print("Hz "); Serial.print(hz); Serial.print(" Diff "); Serial.println(wantedPos - targetF);
+        printCounter = 0;
+    }
     float eAbs = fabsf(err);
 
     // If error is within deadband, gradually reduce integral and stop
@@ -103,20 +128,25 @@ void controlUpdate(int wantedPos) {
     integralError += err * deltaTime;            // Accumulate error over time
     integralError = constrain(integralError, -50.0f, 50.0f);  // Anti-windup
     float I = Ki * integralError;                // Integral term
-    float D = Kd * (err - prevError) / deltaTime;  // Derivative term (dampening)
-    
+
+    // Derivative: use measurement derivative (posF) to avoid large spikes when setpoint changes
+    float measDeriv = (posF - prevPosF) / deltaTime; // percent/sec
+    float D = -Kd * measDeriv;
+    D = constrain(D, -30.0f, 30.0f); // clamp D to avoid huge kicks
+
     float pidOutput = P + I + D;
     
     // Convert PID output to PWM (clamp between PWM_MIN and PWM_FAR)
     int pwm = (int)constrain(PWM_MIN + pidOutput, PWM_MIN, PWM_FAR);
     
-    Serial.print("P: "); Serial.print(P);
-    Serial.print(" I: "); Serial.print(I);
-    Serial.print(" D: "); Serial.print(D);
-    Serial.print(" PID: "); Serial.print(pidOutput);
-    Serial.print(" PWM: "); Serial.println(pwm);
+    // Serial.print("P: "); Serial.print(P);
+    // Serial.print(" I: "); Serial.print(I);
+    // Serial.print(" D: "); Serial.print(D);
+    // Serial.print(" PID: "); Serial.print(pidOutput);
+    // Serial.print(" PWM: "); Serial.println(pwm);
     
     prevError = err;
+    prevPosF = posF;
 
     if (err > 0) motorOpen(pwm);
     else motorClose(pwm);
