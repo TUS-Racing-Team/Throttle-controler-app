@@ -50,7 +50,7 @@ ReadData readApps() {
         } else if ((unsigned long)(millis() - appsPosErrorStart) > 500UL) {
             // persistent error — stop motor
             motorStop();
-            return ReadData{appsData.pos, false};
+            return ReadData{0.0, false};
         }
         // Don't update filtered position while we have an intermittent sensor error
         return ReadData{appsData.pos, false};
@@ -109,7 +109,7 @@ void controlTP() {
     float hz = 1.0f / deltaTime;
     printCounter++;
     if (printCounter >= 5) {
-        Serial.print("Hz "); Serial.print(hz); Serial.print(" Diff "); Serial.println(wantedPos - targetF);
+        Serial.print("Hz "); Serial.print(hz); Serial.print(" Diff "); Serial.println(wanted);
         printCounter = 0;
     }
     float eAbs = fabsf(err);

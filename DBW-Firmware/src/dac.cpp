@@ -8,7 +8,6 @@ static const float DAC_MAX_PCT = 100.0f;   // ECU вижда това като 1
 static const uint16_t DAC_MIN = 0;          // 0 V
 static const uint16_t DAC_MAX = 4095;       // 3.3 V
 
-// Ако искаш idle да не пада под X %
 static const float DAC_IDLE_PCT = 7.5f;
 
 // ===== INTERNAL =====
