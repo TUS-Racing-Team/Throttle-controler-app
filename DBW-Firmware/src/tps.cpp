@@ -13,6 +13,8 @@ int tps2Min = 300;
 int tps2Max = 2600;
 
 static constexpr int RAW_MARGIN = 80;
+static constexpr int ADC_SHORT_LOW = 5;
+static constexpr int ADC_SHORT_HIGH = 4090;
 static constexpr float SENSOR_MISMATCH_LIMIT = 10.0f;
 
 static float clampf(float x, float lo, float hi) {
@@ -22,7 +24,14 @@ static float clampf(float x, float lo, float hi) {
 }
 
 static bool rawInRange(int raw, int mn, int mx, int margin) {
-    return raw >= (mn - margin) && raw <= (mx + margin);
+    if (raw <= ADC_SHORT_LOW || raw >= ADC_SHORT_HIGH) {
+        return false;
+    }
+
+    const int lo = (mn < mx) ? mn : mx;
+    const int hi = (mn < mx) ? mx : mn;
+
+    return raw >= (lo - margin) && raw <= (hi + margin);
 }
 
 static float toPct(int raw, int mn, int mx) {

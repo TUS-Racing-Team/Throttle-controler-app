@@ -36,8 +36,8 @@ float CMD_SLEW_RATE = 250.0f;
 // Fault timing.
 float APPS_FAULT_TIME_MS = 100.0f;
 float TPS_FAULT_TIME_MS = 100.0f;
-float TRACKING_FAULT_TIME_MS = 300.0f;
-float TRACKING_ERROR_LIMIT = 25.0f;
+float TRACKING_FAULT_TIME_MS = 500.0f;
+float TRACKING_ERROR_LIMIT = 10.0f;
 
 // PID safety limits.
 float INTEGRAL_LIMIT = 30.0f;

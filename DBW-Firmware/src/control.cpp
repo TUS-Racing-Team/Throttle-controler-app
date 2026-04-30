@@ -12,6 +12,8 @@
 
 static constexpr float LOOP_DT = 0.001f;
 static constexpr uint32_t LOOP_PERIOD_US = 1000;
+static constexpr float FSG_IDLE_TOLERANCE_PCT = 5.0f;
+static constexpr uint32_t FSG_IDLE_CONFIRM_MS = 1000;
 
 static float posF = 0.0f;
 static float targetF = 0.0f;
@@ -24,8 +26,11 @@ static uint32_t lastLoopUs = 0;
 static uint32_t appsFaultStartMs = 0;
 static uint32_t tpsFaultStartMs = 0;
 static uint32_t trackingFaultStartMs = 0;
+static uint32_t faultIdleStartMs = 0;
 
 static bool faultLatched = false;
+static bool faultIdleConfirmed = true;
+static ControlFaultReason faultReason = CONTROL_FAULT_NONE;
 
 static uint16_t debugCounter = 0;
 
@@ -51,12 +56,44 @@ static void resetPid() {
     prevPosF = posF;
 }
 
-static void latchFault() {
+static bool throttleIsIdle(float throttlePct) {
+    return fabsf(throttlePct - IDLE_POS) <= FSG_IDLE_TOLERANCE_PCT;
+}
+
+static void latchFault(ControlFaultReason reason) {
+    if (!faultLatched) {
+        faultReason = reason;
+        faultIdleStartMs = 0;
+        faultIdleConfirmed = false;
+    }
+
     faultLatched = true;
     resetPid();
     dacSetThrottlePct(ECU_DAC_IDLE_PCT);
 
     // Real fault behavior: disable driver enable pins.
+    motorDisable();
+}
+
+static void monitorFaultedThrottle() {
+    ReadData tpsData = readThrottlePct();
+
+    if (tpsData.valid && throttleIsIdle(tpsData.pos)) {
+        const uint32_t nowMs = millis();
+
+        if (faultIdleStartMs == 0) {
+            faultIdleStartMs = nowMs;
+        }
+
+        if ((uint32_t)(nowMs - faultIdleStartMs) >= FSG_IDLE_CONFIRM_MS) {
+            faultIdleConfirmed = true;
+        }
+    } else {
+        faultIdleStartMs = 0;
+        faultIdleConfirmed = false;
+    }
+
+    dacSetThrottlePct(ECU_DAC_IDLE_PCT);
     motorDisable();
 }
 
@@ -80,8 +117,40 @@ bool controlFaultLatched() {
     return faultLatched;
 }
 
-void controlClearFault() {
+ControlFaultReason controlFaultReason() {
+    return faultReason;
+}
+
+const char* controlFaultReasonText() {
+    switch (faultReason) {
+        case CONTROL_FAULT_APPS:
+            return "APPS";
+        case CONTROL_FAULT_TPS:
+            return "TPS";
+        case CONTROL_FAULT_TRACKING:
+            return "TRACKING";
+        case CONTROL_FAULT_NONE:
+        default:
+            return "NONE";
+    }
+}
+
+bool controlClearFault() {
+    ReadData appsData = readAppsPct();
+    ReadData tpsData = readThrottlePct();
+
+    if (!appsData.valid || !tpsData.valid || !throttleIsIdle(tpsData.pos)) {
+        return false;
+    }
+
+    if (faultLatched && !faultIdleConfirmed) {
+        return false;
+    }
+
     faultLatched = false;
+    faultReason = CONTROL_FAULT_NONE;
+    faultIdleStartMs = 0;
+    faultIdleConfirmed = true;
 
     appsFaultStartMs = 0;
     tpsFaultStartMs = 0;
@@ -90,6 +159,8 @@ void controlClearFault() {
     resetPid();
     targetF = IDLE_POS;
     dacSetThrottlePct(ECU_DAC_IDLE_PCT);
+
+    return true;
 }
 
 void controlInit() {
@@ -105,8 +176,11 @@ void controlInit() {
     appsFaultStartMs = 0;
     tpsFaultStartMs = 0;
     trackingFaultStartMs = 0;
+    faultIdleStartMs = 0;
 
     faultLatched = false;
+    faultIdleConfirmed = true;
+    faultReason = CONTROL_FAULT_NONE;
     debugCounter = 0;
 
     dacSetThrottlePct(ECU_DAC_IDLE_PCT);
@@ -127,8 +201,7 @@ void controlTP() {
     }
 
     if (faultLatched) {
-        dacSetThrottlePct(ECU_DAC_IDLE_PCT);
-        motorDisable();
+        monitorFaultedThrottle();
         return;
     }
 
@@ -136,12 +209,12 @@ void controlTP() {
     ReadData tpsData = readThrottlePct();
 
     if (persistentFault(!appsData.valid, appsFaultStartMs, APPS_FAULT_TIME_MS)) {
-        latchFault();
+        latchFault(CONTROL_FAULT_APPS);
         return;
     }
 
     if (persistentFault(!tpsData.valid, tpsFaultStartMs, TPS_FAULT_TIME_MS)) {
-        latchFault();
+        latchFault(CONTROL_FAULT_TPS);
         return;
     }
 
@@ -175,7 +248,7 @@ void controlTP() {
     // Tracking fault: if target and actual are too far apart for too long.
     const bool trackingBad = absError > TRACKING_ERROR_LIMIT;
     if (persistentFault(trackingBad, trackingFaultStartMs, TRACKING_FAULT_TIME_MS)) {
-        latchFault();
+        latchFault(CONTROL_FAULT_TRACKING);
         return;
     }
 
@@ -247,6 +320,8 @@ void controlTP() {
         SerialUSB.print(" PWM=");
         SerialUSB.print(pwm);
         SerialUSB.print(" Fault=");
-        SerialUSB.println(faultLatched ? 1 : 0);
+        SerialUSB.print(faultLatched ? 1 : 0);
+        SerialUSB.print(" Reason=");
+        SerialUSB.println(controlFaultReasonText());
     }
 }

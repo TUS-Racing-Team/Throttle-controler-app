@@ -39,15 +39,16 @@ static void handleCommand(char* cmd) {
 
     // CLEAR FAULT
     if (strcmp(cmd, "CLEAR FAULT") == 0) {
-        controlClearFault();
-        SerialUSB.println("OK");
+        SerialUSB.println(controlClearFault() ? "OK" : "ERR");
         return;
     }
 
     // GET FAULT
     if (strcmp(cmd, "GET FAULT") == 0) {
         SerialUSB.print("FAULT ");
-        SerialUSB.println(controlFaultLatched() ? 1 : 0);
+        SerialUSB.print(controlFaultLatched() ? 1 : 0);
+        SerialUSB.print(" REASON=");
+        SerialUSB.println(controlFaultReasonText());
         return;
     }
 
