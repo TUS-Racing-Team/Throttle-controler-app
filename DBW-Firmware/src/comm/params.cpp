@@ -12,26 +12,26 @@
 
 float IDLE_POS = 7.5f;
 float FAR_ZONE = 10.0f;
-float DEADBAND = 0.7f;
+float DEADBAND = 1.0f;
 
 // PWM settings for BTS7960.
 // Start conservative. Increase PWM_FAR only after bench testing.
-int PWM_MIN = 35;
-int PWM_NEAR_MAX = 90;
-int PWM_FAR = 160;
+int PWM_MIN = 48;
+int PWM_NEAR_MAX = 100;
+int PWM_FAR = 220;
 
 // Measured TPS low-pass filter.
-float alpha = 0.20f;
+float alpha = 0.25f;
 
 // PID starting values.
 // Tune on bench: start with Ki=0, Kd=0, tune Kp, then add Kd, then small Ki.
-float Kp = 4.0f;
-float Ki = 0.5f;
-float Kd = 0.05f;
+float Kp = 5.0f;
+float Ki = 0.8f;
+float Kd = 0.0f;
 
 // Command filter/slew.
-float CMD_ALPHA = 0.35f;
-float CMD_SLEW_RATE = 250.0f;
+float CMD_ALPHA = 0.75f;
+float CMD_SLEW_RATE = 700.0f;
 
 // Fault timing.
 float APPS_FAULT_TIME_MS = 100.0f;
@@ -40,7 +40,7 @@ float TRACKING_FAULT_TIME_MS = 500.0f;
 float TRACKING_ERROR_LIMIT = 10.0f;
 
 // PID safety limits.
-float INTEGRAL_LIMIT = 30.0f;
+float INTEGRAL_LIMIT = 80.0f;
 float D_FILTER_ALPHA = 0.15f;
 float OUTPUT_LIMIT = 255.0f;
 

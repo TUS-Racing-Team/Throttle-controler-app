@@ -55,5 +55,5 @@ ReadData readThrottlePct() {
     const bool correlationOk = fabsf(p1 - p2) <= SENSOR_MISMATCH_LIMIT;
     const bool valid = rawOk && correlationOk;
 
-    return ReadData{(p1 + p2) * 0.5f, valid};
+    return ReadData{(p1 + p2) * 0.5f, valid, raw1, raw2, p1, p2, rawOk, correlationOk};
 }

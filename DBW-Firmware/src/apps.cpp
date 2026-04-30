@@ -8,9 +8,9 @@
 #include <math.h>
 
 int app1Min = 50;
-int app1Max = 3200;
+int app1Max = 3500;
 int app2Min = 50;
-int app2Max = 3200;
+int app2Max = 3500;
 
 static constexpr int RAW_MARGIN = 80;
 static constexpr int ADC_SHORT_LOW = 5;
@@ -55,5 +55,5 @@ ReadData readAppsPct() {
     const bool correlationOk = fabsf(p1 - p2) <= SENSOR_MISMATCH_LIMIT;
     const bool valid = rawOk && correlationOk;
 
-    return ReadData{(p1 + p2) * 0.5f, valid};
+    return ReadData{(p1 + p2) * 0.5f, valid, raw1, raw2, p1, p2, rawOk, correlationOk};
 }

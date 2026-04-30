@@ -11,8 +11,11 @@
 #define PIN_APPS1 A5
 #define PIN_APPS2 A4
 
-// Motor driver: BTS7960
+// Motor driver: 
 #define PIN_RPWM 4
 #define PIN_LPWM 5
 #define PIN_REN  8
 #define PIN_LEN  9
+
+// pneumatics control:
+#define PIN_PWM_420 2
