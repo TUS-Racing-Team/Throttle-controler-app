@@ -1,36 +1,50 @@
 #include "apps.h"
-#include "adc.h"
+
 #include "pins.h"
 #include "config.h"
 #include "read_data.h"
-#include <Arduino.h>
 
-// TODO: callibrate these values
+#include <Arduino.h>
+#include <math.h>
+
 int app1Min = 50;
 int app1Max = 3200;
 int app2Min = 50;
 int app2Max = 3200;
 
+static constexpr int RAW_MARGIN = 80;
+static constexpr float SENSOR_MISMATCH_LIMIT = 10.0f;
 
-static float clampf(float x, float a, float b) {
-    if (x < a) return a;
-    if (x > b) return b;
+static float clampf(float x, float lo, float hi) {
+    if (x < lo) return lo;
+    if (x > hi) return hi;
     return x;
 }
 
+static bool rawInRange(int raw, int mn, int mx, int margin) {
+    return raw >= (mn - margin) && raw <= (mx + margin);
+}
+
 static float toPct(int raw, int mn, int mx) {
+    if (mx == mn) return 0.0f;
+
     float v = (float)(raw - mn) / (float)(mx - mn);
     return clampf(v, 0.0f, 1.0f) * 100.0f;
 }
 
 ReadData readAppsPct() {
-    float p1 = toPct(analogRead(PIN_APPS1), app1Min, app1Max);
-    float p2 = toPct(analogRead(PIN_APPS2), app2Min, app2Max);
-    // Serial.print("APPS1: "); Serial.print(p1);
-    // Serial.print(" APPS2: "); Serial.println(p2);
-    if (fabsf(p1 - p2) > 10.0f) {
-        // Sensor mismatch
-        return ReadData{(p1 + p2) * 0.5f, false};
-    }
-    return ReadData{(p1 + p2) * 0.5f, true};
+    const int raw1 = analogRead(PIN_APPS1);
+    const int raw2 = analogRead(PIN_APPS2);
+
+    const bool rawOk =
+        rawInRange(raw1, app1Min, app1Max, RAW_MARGIN) &&
+        rawInRange(raw2, app2Min, app2Max, RAW_MARGIN);
+
+    const float p1 = toPct(raw1, app1Min, app1Max);
+    const float p2 = toPct(raw2, app2Min, app2Max);
+
+    const bool correlationOk = fabsf(p1 - p2) <= SENSOR_MISMATCH_LIMIT;
+    const bool valid = rawOk && correlationOk;
+
+    return ReadData{(p1 + p2) * 0.5f, valid};
 }

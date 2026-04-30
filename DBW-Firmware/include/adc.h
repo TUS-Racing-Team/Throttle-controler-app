@@ -1,8 +1,8 @@
 #pragma once
-#include <stdint.h>
 
-// Init ADC hardware
+#include <Arduino.h>
+
+// Optional direct ADC functions.
+// Firmware currently uses Arduino analogRead() with analogReadResolution(12).
 void adcInit();
-
-// Read ADC by Arduino pin (A0, A1, A2...)
 uint16_t readADC(int pin);

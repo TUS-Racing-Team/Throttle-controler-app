@@ -1,6 +1,7 @@
 #pragma once
-#include <stdbool.h>
+
+#include <Arduino.h>
 
 void commInit();
-void commUpdate();        // non-blocking
-bool commIsActive();      // има ли PC
+void commUpdate();
+bool commIsActive();

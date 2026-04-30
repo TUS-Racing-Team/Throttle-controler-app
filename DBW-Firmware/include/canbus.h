@@ -1,6 +1,7 @@
 #pragma once
-#include <stdint.h>
-#include <stdbool.h>
+
+#include <Arduino.h>
+#include <due_can.h>
 
 struct CanFrame {
     uint32_t id;
@@ -10,5 +11,5 @@ struct CanFrame {
 };
 
 void canbusInit(uint32_t bitrate);
-void canbusUpdate();                 // non-blocking
-bool canbusPop(CanFrame& out);       // взимаш кадър
+void canbusUpdate();
+bool canbusPop(CanFrame& out);

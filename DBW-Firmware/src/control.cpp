@@ -1,153 +1,244 @@
 #include "control.h"
+
 #include "motor.h"
 #include "tps.h"
 #include "apps.h"
 #include "config.h"
 #include "read_data.h"
+
 #include <Arduino.h>
 #include <math.h>
 
-float alpha = 0.20f;
-float posF = 0;
+static constexpr float LOOP_DT = 0.001f;
+static constexpr uint32_t LOOP_PERIOD_US = 1000;
 
-// PID state variables
-static float prevError = 0;
-static float integralError = 0;
-static unsigned long lastUpdateTime = 0;
+static float posF = 0.0f;
+static float targetF = 0.0f;
 
-// Filtered target (setpoint)
-static float targetF = 0;
-static float prevPosF = 0;
-static int printCounter = 0;
+static float integralError = 0.0f;
+static float prevPosF = 0.0f;
+static float dFilt = 0.0f;
 
-// Timers for sensor error handling
-static unsigned long tpsPosErrorStart = 0;
-static unsigned long appsPosErrorStart = 0;
+static uint32_t lastLoopUs = 0;
+static uint32_t appsFaultStartMs = 0;
+static uint32_t tpsFaultStartMs = 0;
+static uint32_t trackingFaultStartMs = 0;
 
-// control parameters are declared in include/config.h and defined in params.cpp
+static bool faultLatched = false;
 
-// Use ReadData from include/read_data.h
+static uint16_t debugCounter = 0;
 
-void controlInit() {
-    posF = 0;
-    tpsPosErrorStart = 0;
-    prevError = 0;
-    integralError = 0;
-    lastUpdateTime = millis();
-    targetF = IDLE_POS;
-    prevPosF = 0;
-    printCounter = 0;
+static float clampf(float x, float lo, float hi) {
+    if (x < lo) return lo;
+    if (x > hi) return hi;
+    return x;
 }
 
-ReadData readApps() {
-    ReadData appsData = readAppsPct();
-    
-    if (!appsData.valid) {
-        if (appsPosErrorStart == 0) {
-            appsPosErrorStart = millis();
-            // keep updating but this possition can't be trusted 
-            return ReadData{appsData.pos, false};
-        } else if ((unsigned long)(millis() - appsPosErrorStart) > 500UL) {
-            // persistent error — stop motor
-            motorStop();
-            return ReadData{0.0, false};
-        }
-        // Don't update filtered position while we have an intermittent sensor error
-        return ReadData{appsData.pos, false};
-    } 
+static float slewLimit(float current, float target, float ratePctPerSec, float dt) {
+    const float maxStep = ratePctPerSec * dt;
+    float diff = target - current;
 
-    return ReadData{appsData.pos, true};
+    if (diff > maxStep) diff = maxStep;
+    if (diff < -maxStep) diff = -maxStep;
+
+    return current + diff;
+}
+
+static void resetPid() {
+    integralError = 0.0f;
+    dFilt = 0.0f;
+    prevPosF = posF;
+}
+
+static void latchFault() {
+    faultLatched = true;
+    resetPid();
+
+    // Real fault behavior: disable driver enable pins.
+    motorDisable();
+}
+
+static bool persistentFault(bool condition, uint32_t& startMs, float faultTimeMs) {
+    const uint32_t nowMs = millis();
+
+    if (!condition) {
+        startMs = 0;
+        return false;
+    }
+
+    if (startMs == 0) {
+        startMs = nowMs;
+        return false;
+    }
+
+    return (uint32_t)(nowMs - startMs) >= (uint32_t)faultTimeMs;
+}
+
+bool controlFaultLatched() {
+    return faultLatched;
+}
+
+void controlClearFault() {
+    faultLatched = false;
+
+    appsFaultStartMs = 0;
+    tpsFaultStartMs = 0;
+    trackingFaultStartMs = 0;
+
+    resetPid();
+    targetF = IDLE_POS;
+}
+
+void controlInit() {
+    posF = IDLE_POS;
+    targetF = IDLE_POS;
+
+    integralError = 0.0f;
+    prevPosF = IDLE_POS;
+    dFilt = 0.0f;
+
+    lastLoopUs = micros();
+
+    appsFaultStartMs = 0;
+    tpsFaultStartMs = 0;
+    trackingFaultStartMs = 0;
+
+    faultLatched = false;
+    debugCounter = 0;
+
+    motorDisable();
 }
 
 void controlTP() {
-    ReadData appsData = readApps();
-    float wanted = appsData.pos;
-    float target = (wanted < (int)ceil(IDLE_POS)) ? IDLE_POS : wanted;
+    const uint32_t nowUs = micros();
 
+    if ((uint32_t)(nowUs - lastLoopUs) < LOOP_PERIOD_US) {
+        return;
+    }
+
+    // Keep stable 1 kHz cadence. If we were delayed too much, resync.
+    lastLoopUs += LOOP_PERIOD_US;
+    if ((uint32_t)(nowUs - lastLoopUs) > 5000U) {
+        lastLoopUs = nowUs;
+    }
+
+    if (faultLatched) {
+        motorDisable();
+        return;
+    }
+
+    ReadData appsData = readAppsPct();
     ReadData tpsData = readThrottlePct();
-    float pos = tpsData.pos;
-    bool valid = tpsData.valid;
-    // Serial.print("Target: "); Serial.print(target); Serial.print(" TPS Pos: "); Serial.print(pos); Serial.print(" Valid: "); Serial.println(valid);
-    
-    // Handle sensor errors: if `valid` is for more than 500ms, stop the motor
-    if (!valid) {
-        if (tpsPosErrorStart == 0) {
-            tpsPosErrorStart = millis();
-            // keep updating but this position can't be trusted 
-            posF += alpha * (pos - posF);    
-        } else if ((unsigned long)(millis() - tpsPosErrorStart) > 500UL) {
-            // persistent error — stop motor
-            motorStop();
-            integralError = 0;  // Reset integral on error
-            prevError = 0;
-            return;
-        }
-        // Don't update filtered position while we have an intermittent sensor error
-    } else {
-        // valid reading — reset error timer and update filtered position
-        tpsPosErrorStart = 0;
-        posF += alpha * (pos - posF);
+
+    if (persistentFault(!appsData.valid, appsFaultStartMs, APPS_FAULT_TIME_MS)) {
+        latchFault();
+        return;
     }
 
-    // Calculate time delta for PID
-    unsigned long currentTime = millis();
-    float deltaTime = (currentTime - lastUpdateTime) / 1000.0f;  // Convert to seconds
-    if (deltaTime < 0.001f) deltaTime = 0.001f;  // Minimum 1ms
-    lastUpdateTime = currentTime;
-
-    // Smooth and limit setpoint changes to avoid jumps when moving APPS
-    float targetNext = targetF + CMD_ALPHA * (target - targetF);
-    float maxDelta = CMD_SLEW_RATE * deltaTime; // percent per second -> percent per this step
-    float diff = targetNext - targetF;
-    if (diff > maxDelta) diff = maxDelta;
-    else if (diff < -maxDelta) diff = -maxDelta;
-    targetF += diff;
-
-    float err = targetF - posF;
-
-    // Print only frequency (Hz) and difference between APPS and filtered target, but not every loop
-    float hz = 1.0f / deltaTime;
-    printCounter++;
-    if (printCounter >= 5) {
-        Serial.print("Hz "); Serial.print(hz); Serial.print(" Diff "); Serial.println(wanted);
-        printCounter = 0;
+    if (persistentFault(!tpsData.valid, tpsFaultStartMs, TPS_FAULT_TIME_MS)) {
+        latchFault();
+        return;
     }
-    float eAbs = fabsf(err);
 
-    // If error is within deadband, gradually reduce integral and stop
-    if (eAbs <= DEADBAND) {
-        integralError *= 0.9f;  // Decay integral to prevent windup
-        if (integralError < 0.01f) integralError = 0;
-        prevError = err;
+    // During short APPS glitch, command idle and do not trust the pedal value.
+    if (!appsData.valid) {
+        appsData.pos = IDLE_POS;
+    }
+
+    // During short TPS glitch, stop the motor until readings recover.
+    if (!tpsData.valid) {
+        motorStop();
+        resetPid();
+        return;
+    }
+
+    // Filter measured throttle position.
+    posF += alpha * (tpsData.pos - posF);
+
+    // Clamp command to valid throttle range.
+    float wanted = clampf(appsData.pos, IDLE_POS, 100.0f);
+
+    // Low-pass command, then slew-limit it.
+    float targetNext = targetF + CMD_ALPHA * (wanted - targetF);
+    targetF = slewLimit(targetF, targetNext, CMD_SLEW_RATE, LOOP_DT);
+
+    const float error = targetF - posF;
+    const float absError = fabsf(error);
+
+    // Tracking fault: if target and actual are too far apart for too long.
+    const bool trackingBad = absError > TRACKING_ERROR_LIMIT;
+    if (persistentFault(trackingBad, trackingFaultStartMs, TRACKING_FAULT_TIME_MS)) {
+        latchFault();
+        return;
+    }
+
+    if (absError <= DEADBAND) {
+        resetPid();
         motorStop();
         return;
     }
 
-    // PID calculation
-    float P = Kp * err;                          // Proportional term
-    integralError += err * deltaTime;            // Accumulate error over time
-    integralError = constrain(integralError, -50.0f, 50.0f);  // Anti-windup
-    float I = Ki * integralError;                // Integral term
+    // Derivative on measurement to avoid derivative kick on target changes.
+    const float measurementDerivative = (posF - prevPosF) / LOOP_DT;
+    dFilt += D_FILTER_ALPHA * (measurementDerivative - dFilt);
 
-    // Derivative: use measurement derivative (posF) to avoid large spikes when setpoint changes
-    float measDeriv = (posF - prevPosF) / deltaTime; // percent/sec
-    float D = -Kd * measDeriv;
-    D = constrain(D, -30.0f, 30.0f); // clamp D to avoid huge kicks
+    const float P = Kp * error;
 
-    float pidOutput = P + I + D;
-    
-    // Convert PID output to PWM (clamp between PWM_MIN and PWM_FAR)
-    int pwm = (int)constrain(PWM_MIN + pidOutput, PWM_MIN, PWM_FAR);
-    
-    // Serial.print("P: "); Serial.print(P);
-    // Serial.print(" I: "); Serial.print(I);
-    // Serial.print(" D: "); Serial.print(D);
-    // Serial.print(" PID: "); Serial.print(pidOutput);
-    // Serial.print(" PWM: "); Serial.println(pwm);
-    
-    prevError = err;
+    // Conditional integration anti-windup.
+    float candidateIntegral = integralError + error * LOOP_DT;
+    candidateIntegral = clampf(candidateIntegral, -INTEGRAL_LIMIT, INTEGRAL_LIMIT);
+
+    float I_candidate = Ki * candidateIntegral;
+    float D = -Kd * dFilt;
+
+    float unsatOutput = P + I_candidate + D;
+    float output = clampf(unsatOutput, -OUTPUT_LIMIT, OUTPUT_LIMIT);
+
+    const bool satHigh = unsatOutput > OUTPUT_LIMIT;
+    const bool satLow = unsatOutput < -OUTPUT_LIMIT;
+
+    if ((!satHigh && !satLow) ||
+        (satHigh && error < 0.0f) ||
+        (satLow && error > 0.0f)) {
+        integralError = candidateIntegral;
+    }
+
+    const float I = Ki * integralError;
+    output = clampf(P + I + D, -OUTPUT_LIMIT, OUTPUT_LIMIT);
+
     prevPosF = posF;
 
-    if (err > 0) motorOpen(pwm);
-    else motorClose(pwm);
+    int pwm = (int)fabsf(output);
+
+    // Add minimum PWM only when movement is requested.
+    if (pwm > 0 && pwm < PWM_MIN) {
+        pwm = PWM_MIN;
+    }
+
+    pwm = (int)clampf((float)pwm, 0.0f, (float)PWM_FAR);
+
+    if (output > 0.0f) {
+        motorOpen(pwm);
+    } else {
+        motorClose(pwm);
+    }
+
+    // Lightweight debug at ~20 Hz.
+    debugCounter++;
+    if (debugCounter >= 50) {
+        debugCounter = 0;
+
+        SerialUSB.print("APPS=");
+        SerialUSB.print(appsData.pos);
+        SerialUSB.print(" Target=");
+        SerialUSB.print(targetF);
+        SerialUSB.print(" TPS=");
+        SerialUSB.print(posF);
+        SerialUSB.print(" Err=");
+        SerialUSB.print(error);
+        SerialUSB.print(" PWM=");
+        SerialUSB.print(pwm);
+        SerialUSB.print(" Fault=");
+        SerialUSB.println(faultLatched ? 1 : 0);
+    }
 }

@@ -1,32 +1,35 @@
 #include <Arduino.h>
+
 #include "adc.h"
 #include "motor.h"
 #include "control.h"
 #include "apps.h"
-#include "../include/comm/comm.h"
-
-int cmd = 0;
-
-// Forward declarations for comm interface (header include may be inconsistent in build)
-void commInit();
-void commUpdate();
-bool commIsActive();
+#include "tps.h"
+#include "comm/comm.h"
 
 void setup() {
-  Serial.begin(115200);
-  analogReadResolution(12);
+    Serial.begin(115200);
+    SerialUSB.begin(115200);
 
-  // adcInit();
-  motorInit();
-  controlInit();
-  commInit();
+    analogReadResolution(12);
+    analogWriteResolution(8);
+
+    adcInit();
+    motorInit();
+    controlInit();
+    commInit();
+
+    Serial.println("DBW firmware started");
 }
 
 void loop() {
-  controlTP();
-  
-  if (commIsActive()) {
-    commUpdate();
-  }
-  delay(1);
+    // controlTP() self-schedules at 1 kHz.
+    controlTP();
+
+    // Keep comm non-blocking.
+    if (commIsActive()) {
+        commUpdate();
+    }
+
+    // No delay here: delay() adds jitter to the control loop.
 }

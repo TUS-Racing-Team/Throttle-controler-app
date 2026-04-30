@@ -1,86 +1,151 @@
 #include "comm/params.h"
+
+#include "config.h"
+
 #include <Arduino.h>
 #include <stdlib.h>
 #include <string.h>
 
-// ===== ТЕЗИ ПАРАМЕТРИ СЕ ПОЛЗВАТ ОТ CONTROL =====
+// =====================
+// Control defaults
+// =====================
+
 float IDLE_POS = 7.5f;
-float FAR_ZONE   = 10.0f;
-float DEADBAND   = 1.5f;      // larger zone to prevent oscillation
-int   PWM_FAR    = 110;
-int   PWM_MIN    = 40;
-int   PWM_NEAR_MAX = 90;
+float FAR_ZONE = 10.0f;
+float DEADBAND = 0.7f;
 
-// PID parameters
-float Kp = 1.0f;    // Proportional gain
-float Ki = 0.3f;    // Integral gain
-float Kd = 1.0f;    // Derivative gain (reduced)
+// PWM settings for BTS7960.
+// Start conservative. Increase PWM_FAR only after bench testing.
+int PWM_MIN = 35;
+int PWM_NEAR_MAX = 90;
+int PWM_FAR = 160;
 
-// Command filter defaults
-float CMD_ALPHA = 0.25f;      // smoothing factor for incoming command (higher = faster tracking)
-float CMD_SLEW_RATE = 800.0f; // percent per second maximum change (faster response)
+// Measured TPS low-pass filter.
+float alpha = 0.20f;
+
+// PID starting values.
+// Tune on bench: start with Ki=0, Kd=0, tune Kp, then add Kd, then small Ki.
+float Kp = 4.0f;
+float Ki = 0.5f;
+float Kd = 0.05f;
+
+// Command filter/slew.
+float CMD_ALPHA = 0.35f;
+float CMD_SLEW_RATE = 250.0f;
+
+// Fault timing.
+float APPS_FAULT_TIME_MS = 100.0f;
+float TPS_FAULT_TIME_MS = 100.0f;
+float TRACKING_FAULT_TIME_MS = 300.0f;
+float TRACKING_ERROR_LIMIT = 25.0f;
+
+// PID safety limits.
+float INTEGRAL_LIMIT = 30.0f;
+float D_FILTER_ALPHA = 0.15f;
+float OUTPUT_LIMIT = 255.0f;
+
+static bool setFloat(const char* key, const char* expected, const char* value, float& target) {
+    if (strcmp(key, expected) == 0) {
+        target = atof(value);
+        return true;
+    }
+
+    return false;
+}
+
+static bool setInt(const char* key, const char* expected, const char* value, int& target) {
+    if (strcmp(key, expected) == 0) {
+        target = atoi(value);
+        return true;
+    }
+
+    return false;
+}
 
 void setParam(const char* key, const char* value) {
+    if (setFloat(key, "IDLE_POS", value, IDLE_POS)) return;
+    if (setFloat(key, "FAR_ZONE", value, FAR_ZONE)) return;
+    if (setFloat(key, "DEADBAND", value, DEADBAND)) return;
 
-    if (strcmp(key, "FAR_ZONE") == 0) {
-        FAR_ZONE = atof(value);
-        return;
-    }
+    if (setInt(key, "PWM_MIN", value, PWM_MIN)) return;
+    if (setInt(key, "PWM_NEAR_MAX", value, PWM_NEAR_MAX)) return;
+    if (setInt(key, "PWM_FAR", value, PWM_FAR)) return;
 
-    if (strcmp(key, "DEADBAND") == 0) {
-        DEADBAND = atof(value);
-        return;
-    }
+    if (setFloat(key, "alpha", value, alpha)) return;
 
-    if (strcmp(key, "PWM_FAR") == 0) {
-        PWM_FAR = atoi(value);
-        return;
-    }
+    if (setFloat(key, "Kp", value, Kp)) return;
+    if (setFloat(key, "Ki", value, Ki)) return;
+    if (setFloat(key, "Kd", value, Kd)) return;
 
-    if (strcmp(key, "PWM_MIN") == 0) {
-        PWM_MIN = atoi(value);
-        return;
-    }
+    if (setFloat(key, "CMD_ALPHA", value, CMD_ALPHA)) return;
+    if (setFloat(key, "CMD_SLEW_RATE", value, CMD_SLEW_RATE)) return;
 
-    if (strcmp(key, "PWM_NEAR_MAX") == 0) {
-        PWM_NEAR_MAX = atoi(value);
-        return;
-    }
+    if (setFloat(key, "APPS_FAULT_TIME_MS", value, APPS_FAULT_TIME_MS)) return;
+    if (setFloat(key, "TPS_FAULT_TIME_MS", value, TPS_FAULT_TIME_MS)) return;
+    if (setFloat(key, "TRACKING_FAULT_TIME_MS", value, TRACKING_FAULT_TIME_MS)) return;
+    if (setFloat(key, "TRACKING_ERROR_LIMIT", value, TRACKING_ERROR_LIMIT)) return;
 
-    if (strcmp(key, "Kp") == 0) {
-        Kp = atof(value);
-        return;
-    }
+    if (setFloat(key, "INTEGRAL_LIMIT", value, INTEGRAL_LIMIT)) return;
+    if (setFloat(key, "D_FILTER_ALPHA", value, D_FILTER_ALPHA)) return;
+    if (setFloat(key, "OUTPUT_LIMIT", value, OUTPUT_LIMIT)) return;
 
-    if (strcmp(key, "Ki") == 0) {
-        Ki = atof(value);
-        return;
-    }
+    if (setInt(key, "app1Min", value, app1Min)) return;
+    if (setInt(key, "app1Max", value, app1Max)) return;
+    if (setInt(key, "app2Min", value, app2Min)) return;
+    if (setInt(key, "app2Max", value, app2Max)) return;
 
-    if (strcmp(key, "Kd") == 0) {
-        Kd = atof(value);
-        return;
-    }
-    if (strcmp(key, "CMD_ALPHA") == 0) {
-        CMD_ALPHA = atof(value);
-        return;
-    }
+    if (setInt(key, "tps1Min", value, tps1Min)) return;
+    if (setInt(key, "tps1Max", value, tps1Max)) return;
+    if (setInt(key, "tps2Min", value, tps2Min)) return;
+    if (setInt(key, "tps2Max", value, tps2Max)) return;
+}
 
-    if (strcmp(key, "CMD_SLEW_RATE") == 0) {
-        CMD_SLEW_RATE = atof(value);
-        return;
-    }
+static void printParam(const char* name, float value) {
+    SerialUSB.print(name);
+    SerialUSB.print(" ");
+    SerialUSB.println(value);
+}
+
+static void printParam(const char* name, int value) {
+    SerialUSB.print(name);
+    SerialUSB.print(" ");
+    SerialUSB.println(value);
 }
 
 void dumpParams() {
-    SerialUSB.print("FAR_ZONE "); SerialUSB.println(FAR_ZONE);
-    SerialUSB.print("DEADBAND "); SerialUSB.println(DEADBAND);
-    SerialUSB.print("PWM_FAR "); SerialUSB.println(PWM_FAR);
-    SerialUSB.print("PWM_MIN "); SerialUSB.println(PWM_MIN);
-    SerialUSB.print("PWM_NEAR_MAX "); SerialUSB.println(PWM_NEAR_MAX);
-    SerialUSB.print("Kp "); SerialUSB.println(Kp);
-    SerialUSB.print("Ki "); SerialUSB.println(Ki);
-    SerialUSB.print("Kd "); SerialUSB.println(Kd);
-    SerialUSB.print("CMD_ALPHA "); SerialUSB.println(CMD_ALPHA);
-    SerialUSB.print("CMD_SLEW_RATE "); SerialUSB.println(CMD_SLEW_RATE);
+    printParam("IDLE_POS", IDLE_POS);
+    printParam("FAR_ZONE", FAR_ZONE);
+    printParam("DEADBAND", DEADBAND);
+
+    printParam("PWM_MIN", PWM_MIN);
+    printParam("PWM_NEAR_MAX", PWM_NEAR_MAX);
+    printParam("PWM_FAR", PWM_FAR);
+
+    printParam("alpha", alpha);
+
+    printParam("Kp", Kp);
+    printParam("Ki", Ki);
+    printParam("Kd", Kd);
+
+    printParam("CMD_ALPHA", CMD_ALPHA);
+    printParam("CMD_SLEW_RATE", CMD_SLEW_RATE);
+
+    printParam("APPS_FAULT_TIME_MS", APPS_FAULT_TIME_MS);
+    printParam("TPS_FAULT_TIME_MS", TPS_FAULT_TIME_MS);
+    printParam("TRACKING_FAULT_TIME_MS", TRACKING_FAULT_TIME_MS);
+    printParam("TRACKING_ERROR_LIMIT", TRACKING_ERROR_LIMIT);
+
+    printParam("INTEGRAL_LIMIT", INTEGRAL_LIMIT);
+    printParam("D_FILTER_ALPHA", D_FILTER_ALPHA);
+    printParam("OUTPUT_LIMIT", OUTPUT_LIMIT);
+
+    printParam("app1Min", app1Min);
+    printParam("app1Max", app1Max);
+    printParam("app2Min", app2Min);
+    printParam("app2Max", app2Max);
+
+    printParam("tps1Min", tps1Min);
+    printParam("tps1Max", tps1Max);
+    printParam("tps2Min", tps2Min);
+    printParam("tps2Max", tps2Max);
 }

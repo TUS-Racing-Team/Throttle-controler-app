@@ -2,5 +2,6 @@
 
 #include "read_data.h"
 
-// Read apps position in percent (0..100)
+// Read accelerator pedal position in percent.
+// Returns valid=false if raw range or correlation check fails.
 ReadData readAppsPct();

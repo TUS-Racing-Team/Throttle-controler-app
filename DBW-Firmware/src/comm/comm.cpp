@@ -1,5 +1,7 @@
 #include "comm/comm.h"
+
 #include "comm/protokol.h"
+
 #include <Arduino.h>
 
 void commInit() {
@@ -7,11 +9,13 @@ void commInit() {
 }
 
 bool commIsActive() {
-    return SerialUSB;   // Native USB CDC
+    return SerialUSB;
 }
 
 void commUpdate() {
-    if (!SerialUSB) return;
+    if (!SerialUSB) {
+        return;
+    }
 
     while (SerialUSB.available()) {
         char c = SerialUSB.read();
