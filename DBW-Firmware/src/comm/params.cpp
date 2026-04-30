@@ -44,6 +44,16 @@ float INTEGRAL_LIMIT = 30.0f;
 float D_FILTER_ALPHA = 0.15f;
 float OUTPUT_LIMIT = 255.0f;
 
+// ECU analog output on Arduino Due DAC0.
+float ECU_DAC_IDLE_PCT = 7.5f;
+float ECU_DAC_MIN_RAW = 0.0f;
+float ECU_DAC_MAX_RAW = 4095.0f;
+
+// Link ECU Generic Dash defaults. Match these with PCLink CAN Setup.
+int LINK_ECU_CAN_BITRATE = 1000000;
+int LINK_ECU_CAN_ID = 56;
+int LINK_ECU_CAN_TIMEOUT_MS = 250;
+
 static bool setFloat(const char* key, const char* expected, const char* value, float& target) {
     if (strcmp(key, expected) == 0) {
         target = atof(value);
@@ -55,7 +65,7 @@ static bool setFloat(const char* key, const char* expected, const char* value, f
 
 static bool setInt(const char* key, const char* expected, const char* value, int& target) {
     if (strcmp(key, expected) == 0) {
-        target = atoi(value);
+        target = (int)strtol(value, NULL, 0);
         return true;
     }
 
@@ -88,6 +98,14 @@ void setParam(const char* key, const char* value) {
     if (setFloat(key, "INTEGRAL_LIMIT", value, INTEGRAL_LIMIT)) return;
     if (setFloat(key, "D_FILTER_ALPHA", value, D_FILTER_ALPHA)) return;
     if (setFloat(key, "OUTPUT_LIMIT", value, OUTPUT_LIMIT)) return;
+
+    if (setFloat(key, "ECU_DAC_IDLE_PCT", value, ECU_DAC_IDLE_PCT)) return;
+    if (setFloat(key, "ECU_DAC_MIN_RAW", value, ECU_DAC_MIN_RAW)) return;
+    if (setFloat(key, "ECU_DAC_MAX_RAW", value, ECU_DAC_MAX_RAW)) return;
+
+    if (setInt(key, "LINK_ECU_CAN_BITRATE", value, LINK_ECU_CAN_BITRATE)) return;
+    if (setInt(key, "LINK_ECU_CAN_ID", value, LINK_ECU_CAN_ID)) return;
+    if (setInt(key, "LINK_ECU_CAN_TIMEOUT_MS", value, LINK_ECU_CAN_TIMEOUT_MS)) return;
 
     if (setInt(key, "app1Min", value, app1Min)) return;
     if (setInt(key, "app1Max", value, app1Max)) return;
@@ -138,6 +156,14 @@ void dumpParams() {
     printParam("INTEGRAL_LIMIT", INTEGRAL_LIMIT);
     printParam("D_FILTER_ALPHA", D_FILTER_ALPHA);
     printParam("OUTPUT_LIMIT", OUTPUT_LIMIT);
+
+    printParam("ECU_DAC_IDLE_PCT", ECU_DAC_IDLE_PCT);
+    printParam("ECU_DAC_MIN_RAW", ECU_DAC_MIN_RAW);
+    printParam("ECU_DAC_MAX_RAW", ECU_DAC_MAX_RAW);
+
+    printParam("LINK_ECU_CAN_BITRATE", LINK_ECU_CAN_BITRATE);
+    printParam("LINK_ECU_CAN_ID", LINK_ECU_CAN_ID);
+    printParam("LINK_ECU_CAN_TIMEOUT_MS", LINK_ECU_CAN_TIMEOUT_MS);
 
     printParam("app1Min", app1Min);
     printParam("app1Max", app1Max);

@@ -47,3 +47,19 @@ extern float TRACKING_ERROR_LIMIT;
 extern float INTEGRAL_LIMIT;
 extern float D_FILTER_ALPHA;
 extern float OUTPUT_LIMIT;
+
+// =====================
+// ECU analog output
+// =====================
+
+extern float ECU_DAC_IDLE_PCT;
+extern float ECU_DAC_MIN_RAW;
+extern float ECU_DAC_MAX_RAW;
+
+// =====================
+// Link ECU CAN
+// =====================
+
+extern int LINK_ECU_CAN_BITRATE;
+extern int LINK_ECU_CAN_ID;
+extern int LINK_ECU_CAN_TIMEOUT_MS;

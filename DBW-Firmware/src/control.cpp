@@ -1,6 +1,7 @@
 #include "control.h"
 
 #include "motor.h"
+#include "dac.h"
 #include "tps.h"
 #include "apps.h"
 #include "config.h"
@@ -53,6 +54,7 @@ static void resetPid() {
 static void latchFault() {
     faultLatched = true;
     resetPid();
+    dacSetThrottlePct(ECU_DAC_IDLE_PCT);
 
     // Real fault behavior: disable driver enable pins.
     motorDisable();
@@ -87,6 +89,7 @@ void controlClearFault() {
 
     resetPid();
     targetF = IDLE_POS;
+    dacSetThrottlePct(ECU_DAC_IDLE_PCT);
 }
 
 void controlInit() {
@@ -106,6 +109,7 @@ void controlInit() {
     faultLatched = false;
     debugCounter = 0;
 
+    dacSetThrottlePct(ECU_DAC_IDLE_PCT);
     motorDisable();
 }
 
@@ -123,6 +127,7 @@ void controlTP() {
     }
 
     if (faultLatched) {
+        dacSetThrottlePct(ECU_DAC_IDLE_PCT);
         motorDisable();
         return;
     }
@@ -147,6 +152,7 @@ void controlTP() {
 
     // During short TPS glitch, stop the motor until readings recover.
     if (!tpsData.valid) {
+        dacSetThrottlePct(ECU_DAC_IDLE_PCT);
         motorStop();
         resetPid();
         return;
@@ -154,6 +160,7 @@ void controlTP() {
 
     // Filter measured throttle position.
     posF += alpha * (tpsData.pos - posF);
+    dacSetThrottlePct(posF);
 
     // Clamp command to valid throttle range.
     float wanted = clampf(appsData.pos, IDLE_POS, 100.0f);
@@ -215,7 +222,8 @@ void controlTP() {
         pwm = PWM_MIN;
     }
 
-    pwm = (int)clampf((float)pwm, 0.0f, (float)PWM_FAR);
+    const int pwmMax = (absError <= FAR_ZONE) ? PWM_NEAR_MAX : PWM_FAR;
+    pwm = (int)clampf((float)pwm, 0.0f, (float)pwmMax);
 
     if (output > 0.0f) {
         motorOpen(pwm);

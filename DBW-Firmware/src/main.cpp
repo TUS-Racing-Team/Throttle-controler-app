@@ -6,6 +6,9 @@
 #include "apps.h"
 #include "tps.h"
 #include "comm/comm.h"
+#include "canbus.h"
+#include "config.h"
+#include "dac.h"
 
 void setup() {
     Serial.begin(115200);
@@ -16,7 +19,9 @@ void setup() {
 
     adcInit();
     motorInit();
+    dacInit();
     controlInit();
+    canbusInit((uint32_t)LINK_ECU_CAN_BITRATE);
     commInit();
 
     Serial.println("DBW firmware started");
@@ -25,6 +30,9 @@ void setup() {
 void loop() {
     // controlTP() self-schedules at 1 kHz.
     controlTP();
+
+    // Read Link ECU Generic Dash frames without blocking the control loop.
+    canbusUpdate();
 
     // Keep comm non-blocking.
     if (commIsActive()) {

@@ -2,6 +2,8 @@
 
 #include "comm/params.h"
 #include "control.h"
+#include "canbus.h"
+#include "config.h"
 
 #include <Arduino.h>
 #include <string.h>
@@ -21,6 +23,10 @@ static void handleCommand(char* cmd) {
         }
 
         setParam(key, val);
+        if (strcmp(key, "LINK_ECU_CAN_BITRATE") == 0) {
+            canbusInit((uint32_t)LINK_ECU_CAN_BITRATE);
+        }
+
         SerialUSB.println("OK");
         return;
     }
@@ -42,6 +48,29 @@ static void handleCommand(char* cmd) {
     if (strcmp(cmd, "GET FAULT") == 0) {
         SerialUSB.print("FAULT ");
         SerialUSB.println(controlFaultLatched() ? 1 : 0);
+        return;
+    }
+
+    // GET ECU
+    if (strcmp(cmd, "GET ECU") == 0) {
+        LinkEcuData data;
+        canbusGetLinkEcuData(data);
+
+        SerialUSB.print("ECU RPM=");
+        if (data.rpmValid) {
+            SerialUSB.print(data.rpm);
+        } else {
+            SerialUSB.print("NA");
+        }
+
+        SerialUSB.print(" ECT_C=");
+        if (data.coolantTempValid) {
+            SerialUSB.print(data.coolantTempC, 1);
+        } else {
+            SerialUSB.print("NA");
+        }
+
+        SerialUSB.println();
         return;
     }
 

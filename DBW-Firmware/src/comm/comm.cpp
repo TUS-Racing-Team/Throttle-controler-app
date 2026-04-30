@@ -4,6 +4,8 @@
 
 #include <Arduino.h>
 
+static constexpr uint8_t MAX_BYTES_PER_UPDATE = 32;
+
 void commInit() {
     SerialUSB.begin(115200);
 }
@@ -17,7 +19,8 @@ void commUpdate() {
         return;
     }
 
-    while (SerialUSB.available()) {
+    uint8_t bytesLeft = MAX_BYTES_PER_UPDATE;
+    while (bytesLeft-- > 0 && SerialUSB.available()) {
         char c = SerialUSB.read();
         protocolFeed(c);
     }
