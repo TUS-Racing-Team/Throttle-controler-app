@@ -51,7 +51,7 @@ float ECU_DAC_MAX_RAW = 4095.0f;
 
 // Link ECU Generic Dash defaults. Match these with PCLink CAN Setup.
 int LINK_ECU_CAN_BITRATE = 1000000;
-int LINK_ECU_CAN_ID = 56;
+int LINK_ECU_CAN_ID = 1000;
 int LINK_ECU_CAN_TIMEOUT_MS = 250;
 
 static bool setFloat(const char* key, const char* expected, const char* value, float& target) {
